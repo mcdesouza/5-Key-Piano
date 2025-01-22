@@ -38,15 +38,8 @@ Project Features
 ## Demo
 
 [[Link to Demo Video](https://drive.google.com/file/d/1lXPweoQZdbN_PKs7lyyIJh9niNJhGgYO/view?usp=sharing)]
-How to Use
-
-    Clone or download the repository.
-    Open the project in Keil MicroVision.
-    Connect the hardware as described above.
-    Compile and flash the code onto the TM4C123GXL microcontroller.
-    Press the buttons to hear corresponding tones and see LED feedback.
 
 Project Files
 
-    Lab3.uvprojx: ARM assembly code for the project.
+    main.s: ARM assembly main file for the project.
 
