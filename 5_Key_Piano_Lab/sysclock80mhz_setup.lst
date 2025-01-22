@@ -1,0 +1,234 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ;****************** main.s ***************
+    2 00000000         ; Program written by: Dr. D
+    3 00000000         ; Date Created: 4/8/21
+    4 00000000         ; Last Modified: 4/8/21
+    5 00000000         ; Brief description of the program: Code to configure th
+                       e System Clock
+    6 00000000         ; 
+    7 00000000         
+    8 00000000         
+    9 00000000         ; ******************************************************
+                       **************
+   10 00000000         ; ********************* EQU Label Definitions **********
+                       **************
+   11 00000000         ; ******************************************************
+                       **************
+   12 00000000         
+   13 00000000         ; System Clock registers
+   14 00000000 400FE050 
+                       SYSCTL_RIS_R
+                               EQU              0x400FE050
+   15 00000000 400FE060 
+                       SYSCTL_RCC_R
+                               EQU              0x400FE060
+   16 00000000 400FE070 
+                       SYSCTL_RCC2_R
+                               EQU              0x400FE070
+   17 00000000 00000004 
+                       SYSDIV2 EQU              4           ; this is actually 
+                                                            SYSDIV2 + SYSDIV2LS
+                                                            B, 
+   18 00000000         ; see Table 5-6, p.224 of documentation
+   19 00000000         
+   20 00000000                 THUMB
+   21 00000000         
+   22 00000000         
+   23 00000000         ; ******************************************************
+                       ***************
+   24 00000000         ; *************************** CODE AREA IN ROM *********
+                       ***************
+   25 00000000         ; ******************************************************
+                       ***************
+   26 00000000                 AREA             MySysClockConfig, CODE, READONL
+Y, ALIGN=2 
+                                                            ; Flash ROM
+   27 00000000         
+   28 00000000                 ALIGN
+   29 00000000         
+   30 00000000         
+   31 00000000                 EXPORT           SysClock80MHz_Config
+   32 00000000         
+   33 00000000         SysClock80MHz_Config
+   34 00000000         
+   35 00000000         ; System Clock Initialization
+   36 00000000         ; R0 --> RCC register data
+   37 00000000         ; R1 --> RCC register address
+   38 00000000         ; R2 --> RCC2 register data
+   39 00000000         ; R3 --> RCC2 register address
+   40 00000000         ; step 0: configure system to use RCC2
+   41 00000000 4B16            LDR              R3, =SYSCTL_RCC2_R
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   42 00000002 681A            LDR              R2, [R3]
+   43 00000004 F042 4200       ORR              R2, R2, #0x80000000 
+                                                            ; set USERCC2 bit
+   44 00000008 601A            STR              R2, [R3]
+   45 0000000A         ; step 1: bypass PLL while initializing
+   46 0000000A 4B14            LDR              R3, =SYSCTL_RCC2_R
+   47 0000000C 681A            LDR              R2, [R3]
+   48 0000000E F442 6200       ORR              R2, R2, #0x00000800 ; set BYPAS
+                                                            S2, which overrides
+                                                             BYPASS
+   49 00000012 601A            STR              R2, [R3]
+   50 00000014         ; step 2: set crystal value & select the Main Oscillator
+                        (MOSC)
+   51 00000014 4912            LDR              R1, = SYSCTL_RCC_R
+   52 00000016 6808            LDR              R0, [R1]
+   53 00000018 F420 60F8       BIC              R0, R0, #0x000007C0 ; clear XTA
+                                                            L field in RCC
+   54 0000001C F440 60A8       ORR              R0, R0, #0x00000540 ; configure
+                                                             for 16MHz crystal
+   55 00000020 6008            STR              R0, [R1]
+   56 00000022 4B0E            LDR              R3, =SYSCTL_RCC2_R
+   57 00000024 681A            LDR              R2, [R3]
+   58 00000026 F022 0270       BIC              R2, R2, #0x00000070 ; select Ma
+                                                            in Oscillator MOSC 
+                                                            in RCC2
+   59 0000002A 601A            STR              R2, [R3]
+   60 0000002C         ; step 3: turn on the PLL by clearing PWRDN2
+   61 0000002C 4B0B            LDR              R3, =SYSCTL_RCC2_R
+   62 0000002E 681A            LDR              R2, [R3]
+   63 00000030 F422 5200       BIC              R2, R2, #0x00002000 
+                                                            ; power up the PLL
+   64 00000034 601A            STR              R2, [R3]
+   65 00000036         ; step 4: divide the clock frequency (if desired)
+   66 00000036 F042 4280       ORR              R2, R2, #0x40000000 ; set DIV40
+                                                            0 to pass the undiv
+                                                            ided 400MHz clk thr
+                                                            u
+   67 0000003A F022 52FE       BIC              R2, R2, #0x1FC00000 ; clear sys
+                                                            tem clock divider f
+                                                            ield (SYSDIV2) incl
+                                                            uding SYSDIV2LSB
+   68 0000003E F102 7280       ADD              R2, R2, #(SYSDIV2<<22) ; SYSDIV
+                                                            2 = 4 & BYPASS2 = 1
+                                                             --> 80 MHz clock (
+                                                            see documentation)
+   69 00000042 601A            STR              R2, [R3]
+   70 00000044         ; step 5: wait for PLL to lock by polling PLLRIS
+   71 00000044         ; R0 --> SYSCTL_RIS_R data
+   72 00000044         ; R1 --> SYSCTL_RIS_R address
+   73 00000044 4907            LDR              R1, =SYSCTL_RIS_R ; raw interru
+                                                            pt status register
+   74 00000046         PLL_Init_loop
+   75 00000046 6808            LDR              R0, [R1]
+   76 00000048 F010 0040       ANDS             R0, R0, #0x00000040 
+                                                            ; mask for PLL RIS
+   77 0000004C D0FB            BEQ              PLL_Init_loop ; if PLL RIS == 0
+                                                            , keep polling
+   78 0000004E         ; step 6: enable use of PLL by clearing BYPASS
+   79 0000004E 4B03            LDR              R3, =SYSCTL_RCC2_R
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+   80 00000050 681A            LDR              R2, [R3]
+   81 00000052 F422 6200       BIC              R2, R2, #0x00000800 ; clear BYP
+                                                            ASS2 --> switch to 
+                                                            PLL clock signal
+   82 00000056 601A            STR              R2, [R3]
+   83 00000058 BF00            NOP
+   84 0000005A         
+   85 0000005A 4770            BX               LR
+   86 0000005C         
+   87 0000005C         
+   88 0000005C                 ALIGN                        ; make sure the end
+                                                             of this section is
+                                                             aligned
+   89 0000005C                 END                          ; end of file
+              400FE070 
+              400FE060 
+              400FE050 
+Command Line: --debug --xref --diag_suppress=9931,A1950W --cpu=Cortex-M4 --fpu=
+SoftVFP --depend=.\sysclock80mhz_setup.d -o.\sysclock80mhz_setup.o -I.\RTE\_Lab
+3 -IC:\Keil_v5\ARM\Packs\ARM\CMSIS\6.1.0\CMSIS\Core\Include -IC:\Keil_v5\ARM\Pa
+cks\Keil\TM4C_DFP\1.1.0\Device\Include\TM4C123 --predefine="__EVAL SETA 1" --pr
+edefine="__UVISION_VERSION SETA 540" --predefine="TM4C123GH6PM SETA 1" --predef
+ine="_RTE_ SETA 1" --list=.\sysclock80mhz_setup.lst SysClock80MHz_Setup.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+MySysClockConfig 00000000
+
+Symbol: MySysClockConfig
+   Definitions
+      At line 26 in file SysClock80MHz_Setup.s
+   Uses
+      None
+Comment: MySysClockConfig unused
+PLL_Init_loop 00000046
+
+Symbol: PLL_Init_loop
+   Definitions
+      At line 74 in file SysClock80MHz_Setup.s
+   Uses
+      At line 77 in file SysClock80MHz_Setup.s
+Comment: PLL_Init_loop used once
+SysClock80MHz_Config 00000000
+
+Symbol: SysClock80MHz_Config
+   Definitions
+      At line 33 in file SysClock80MHz_Setup.s
+   Uses
+      At line 31 in file SysClock80MHz_Setup.s
+Comment: SysClock80MHz_Config used once
+3 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+SYSCTL_RCC2_R 400FE070
+
+Symbol: SYSCTL_RCC2_R
+   Definitions
+      At line 16 in file SysClock80MHz_Setup.s
+   Uses
+      At line 41 in file SysClock80MHz_Setup.s
+      At line 46 in file SysClock80MHz_Setup.s
+      At line 56 in file SysClock80MHz_Setup.s
+      At line 61 in file SysClock80MHz_Setup.s
+      At line 79 in file SysClock80MHz_Setup.s
+
+SYSCTL_RCC_R 400FE060
+
+Symbol: SYSCTL_RCC_R
+   Definitions
+      At line 15 in file SysClock80MHz_Setup.s
+   Uses
+      At line 51 in file SysClock80MHz_Setup.s
+Comment: SYSCTL_RCC_R used once
+SYSCTL_RIS_R 400FE050
+
+Symbol: SYSCTL_RIS_R
+   Definitions
+      At line 14 in file SysClock80MHz_Setup.s
+   Uses
+      At line 73 in file SysClock80MHz_Setup.s
+Comment: SYSCTL_RIS_R used once
+SYSDIV2 00000004
+
+Symbol: SYSDIV2
+   Definitions
+      At line 17 in file SysClock80MHz_Setup.s
+   Uses
+      At line 68 in file SysClock80MHz_Setup.s
+Comment: SYSDIV2 used once
+4 symbols
+343 symbols in table

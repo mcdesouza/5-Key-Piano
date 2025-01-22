@@ -1,0 +1,166 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ;****************** main.s ***************
+    2 00000000         ; Program written by: Dr. D
+    3 00000000         ; Date Created: 4/8/21
+    4 00000000         ; Last Modified: 4/8/21
+    5 00000000         ; Brief description of the program: Code to configure th
+                       e System Clock
+    6 00000000         ; 
+    7 00000000         
+    8 00000000         
+    9 00000000         ; ******************************************************
+                       **************
+   10 00000000         ; ********************* EQU Label Definitions **********
+                       **************
+   11 00000000         ; ******************************************************
+                       **************
+   12 00000000         
+   13 00000000         ; SysTick Timer addresses
+   14 00000000 E000E010 
+                       NVIC_ST_CTRL_R
+                               EQU              0xE000E010  ; SysTick Control a
+                                                            nd Status Register 
+                                                            (STCTRL)
+   15 00000000 E000E014 
+                       NVIC_ST_RELOAD_R
+                               EQU              0xE000E014  ; SysTick Reload Va
+                                                            lue register (STREL
+                                                            OAD)
+   16 00000000 E000E018 
+                       NVIC_ST_CURRENT_R
+                               EQU              0xE000E018  ; SysTick Current V
+                                                            alue Register (STCU
+                                                            RRENT)
+   17 00000000         ;DELAY    EQU 400000  ; 400,000 ticks = 5ms at 80MHz
+   18 00000000         
+   19 00000000         
+   20 00000000                 THUMB
+   21 00000000         
+   22 00000000         
+   23 00000000         ; ******************************************************
+                       ***************
+   24 00000000         ; *************************** CODE AREA IN ROM *********
+                       ***************
+   25 00000000         ; ******************************************************
+                       ***************
+   26 00000000                 AREA             MySysTickConfig, CODE, READONLY
+, ALIGN=2 
+                                                            ; Flash ROM
+   27 00000000         
+   28 00000000                 ALIGN
+   29 00000000         
+   30 00000000         
+   31 00000000                 EXPORT           SysTick_Config
+   32 00000000         
+   33 00000000         SysTick_Config
+   34 00000000         ; Step 1: clear the SysTick enable bit to turn off durin
+                       g initialization
+   35 00000000 4909            LDR              R1, =NVIC_ST_CTRL_R
+   36 00000002 6808            LDR              R0, [R1]
+   37 00000004 F020 0001       BIC              R0, #1
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   38 00000008 6008            STR              R0, [R1]
+   39 0000000A         
+   40 0000000A         ; Step 2: reload the counter start value
+   41 0000000A 4908            LDR              R1, =NVIC_ST_RELOAD_R
+   42 0000000C F06F 407F       LDR              R0, =0x00FFFFFF ; maximum reloa
+                                                            d value 0x00FF.FFFF
+                                                             = 16,777,215
+   43 00000010 6008            STR              R0, [R1]
+   44 00000012         
+   45 00000012         ; Step 3: write to current value register to clear the c
+                       ounter
+   46 00000012 4907            LDR              R1, =NVIC_ST_CURRENT_R
+   47 00000014 6808            LDR              R0, [R1]
+   48 00000016 F040 0001       ORR              R0, #0x1
+   49 0000001A 6008            STR              R0, [R1]
+   50 0000001C         
+   51 0000001C         ; Step 4: write the desired clock mode (core clock) to t
+                       he control register
+   52 0000001C 4902            LDR              R1, =NVIC_ST_CTRL_R
+   53 0000001E 6808            LDR              R0, [R1]
+   54 00000020 F040 0005       ORR              R0, #0x05   ; ENABLE and CLK_SR
+                                                            C bits set
+   55 00000024 6008            STR              R0, [R1]
+   56 00000026 4770            BX               LR
+   57 00000028         
+   58 00000028         
+   59 00000028                 ALIGN                        ; make sure the end
+                                                             of this section is
+                                                             aligned
+   60 00000028                 END                          ; end of file
+              E000E010 
+              E000E014 
+              E000E018 
+Command Line: --debug --xref --diag_suppress=9931,A1950W --cpu=Cortex-M4 --fpu=
+SoftVFP --depend=.\systicktimer_setup.d -o.\systicktimer_setup.o -I.\RTE\_Lab3 
+-IC:\Keil_v5\ARM\Packs\ARM\CMSIS\6.1.0\CMSIS\Core\Include -IC:\Keil_v5\ARM\Pack
+s\Keil\TM4C_DFP\1.1.0\Device\Include\TM4C123 --predefine="__EVAL SETA 1" --pred
+efine="__UVISION_VERSION SETA 540" --predefine="TM4C123GH6PM SETA 1" --predefin
+e="_RTE_ SETA 1" --list=.\systicktimer_setup.lst SysTickTimer_Setup.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+MySysTickConfig 00000000
+
+Symbol: MySysTickConfig
+   Definitions
+      At line 26 in file SysTickTimer_Setup.s
+   Uses
+      None
+Comment: MySysTickConfig unused
+SysTick_Config 00000000
+
+Symbol: SysTick_Config
+   Definitions
+      At line 33 in file SysTickTimer_Setup.s
+   Uses
+      At line 31 in file SysTickTimer_Setup.s
+Comment: SysTick_Config used once
+2 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+NVIC_ST_CTRL_R E000E010
+
+Symbol: NVIC_ST_CTRL_R
+   Definitions
+      At line 14 in file SysTickTimer_Setup.s
+   Uses
+      At line 35 in file SysTickTimer_Setup.s
+      At line 52 in file SysTickTimer_Setup.s
+
+NVIC_ST_CURRENT_R E000E018
+
+Symbol: NVIC_ST_CURRENT_R
+   Definitions
+      At line 16 in file SysTickTimer_Setup.s
+   Uses
+      At line 46 in file SysTickTimer_Setup.s
+Comment: NVIC_ST_CURRENT_R used once
+NVIC_ST_RELOAD_R E000E014
+
+Symbol: NVIC_ST_RELOAD_R
+   Definitions
+      At line 15 in file SysTickTimer_Setup.s
+   Uses
+      At line 41 in file SysTickTimer_Setup.s
+Comment: NVIC_ST_RELOAD_R used once
+3 symbols
+341 symbols in table
